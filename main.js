@@ -1,18 +1,44 @@
-// 📄 main.js
 import { Worker } from 'worker_threads';
 import { getCandles } from './candles.js';
 import { getTestConfigs } from './pump-short-bot.js';
 import os from 'os';
-const cpuCount = os.cpus().length;
+import BigNumber from 'bignumber.js';
 
-console.log(`🧠 Доступно логічних ядер: ${cpuCount}`);
+const CPU_COUNT = os.cpus().length;
+const THREADS = Math.max(os.cpus().length - 1, 1);
+const PAIR = 'FARTCOINUSDT'.toLowerCase()
 
-const THREADS = Math.max(os.cpus().length - 2, 1);
+console.log(`🧠 Доступно логічних ядер: ${CPU_COUNT}`);
+
+function formatDuration(ms) {
+  const sec = Math.floor(ms / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${h}г ${m}хв ${s}с`;
+}
+
+function getTime() {
+  const now = new Date();
+  const to = now.getTime() + 1 * 60 * 60 * 1000; // текущее время + 1 час
+
+  const fromDate = new Date(now);
+  fromDate.setFullYear(fromDate.getFullYear() - 1);
+  fromDate.setMonth(fromDate.getMonth() - 3);
+  const from = fromDate.getTime(); // минус 1 год и 3 месяца
+
+  return {
+    start: now,
+    to,
+    from
+  }
+}
 
 async function run() {
-  const from = 1719912800 * 1000;
-  const to = 1751448800 * 1000;
-  const { candles } = await getCandles('broccolif3busdt', from, to, 1, 'futures');
+  const {start, from, to} = getTime();
+  console.log(`🟢 Бектест стартував о ${start.toLocaleTimeString()}`);
+  
+  const { candles } = await getCandles(PAIR, from, to, 1, 'futures');
   const testConfigs = getTestConfigs();
 
   const chunkSize = Math.ceil(testConfigs.length / THREADS);
@@ -38,14 +64,23 @@ async function run() {
     })
   );
 
-  const flatResults = await Promise.all(promises);
-  const bestResult = flatResults.reduce((max, current) =>
-    current.netProfit.isGreaterThan(max.netProfit) ? current : max
-  );
+  const results = await Promise.all(promises);
+  const bestResult = results.reduce((max, current) => {
+    const currentNet = new BigNumber(current.netProfit);
+    const maxNet = new BigNumber(max.netProfit);
+    return currentNet.isGreaterThan(maxNet) ? current : max;
+  });
 
   console.log('\n🚀 Найприбутковіші налаштування:');
   console.log(JSON.stringify(bestResult.settings, null, 2));
-  console.log(`Чистий прибуток: ${bestResult.netProfit.toFixed(2)} USDT`);
+  console.log(JSON.stringify(results, null, 2));
+  console.log(`Чистий прибуток: ${bestResult.netProfit} USDT`);
+
+  const end = new Date();
+  const duration = formatDuration(end - start);
+
+  console.log(`✅ Бектест завершився о ${end.toLocaleTimeString()}`);
+  console.log(`🕒 Тривалість: ${duration}`);
 }
 
 run();

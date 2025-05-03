@@ -1,13 +1,14 @@
 import BigNumber from 'bignumber.js';
+import { count } from 'console';
 
 export function getTestConfigs() {
-  const pumpPercents = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20];
-  const takeProfits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20];
-  const stopLosses = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20];
+  const pumpPercents = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  const takeProfits = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, ];
+  const stopLosses = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
   const durations = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150];
-  const breakTimes = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150];
+  const breakTimes = [1, 15, 30, 45, 60, 75, 90, 105];
 
-  const targetCount = 100000;
+  const targetCount = 1000000;
   const testConfigs = [];
 
   outer: for (let pp of pumpPercents) {
@@ -16,10 +17,10 @@ export function getTestConfigs() {
         for (let d of durations) {
           for (let bt of breakTimes) {
             testConfigs.push({
-              positionVolume: new BigNumber(50),
-              pumpPercent: new BigNumber(pp),
-              takeProfit: new BigNumber(tp),
-              stopLoss: new BigNumber(sl),
+              positionVolume: 50,
+              pumpPercent: pp,
+              takeProfit: tp,
+              stopLoss: sl,
               maxPositionLifetime: 30000,
               duration: d,
               breakTime: bt,
@@ -39,10 +40,12 @@ function percentGrowth(from, to) {
 }
 
 export async function backtest(settings, candles) {
+  try {
   let inPosition = false;
   let entryPrice = null;
   let entryIndex = null;
   let cooldownUntil = -Infinity;
+
   const results = [];
 
   for (let i = settings.duration; i < candles.length; i++) {
@@ -56,18 +59,19 @@ export async function backtest(settings, candles) {
     const pump = percentGrowth(pastLow, close);
 
     if (!inPosition && i > cooldownUntil && pump.isGreaterThanOrEqualTo(settings.pumpPercent)) {
+      // Open short
       inPosition = true;
       entryPrice = close;
       entryIndex = i;
     }
 
     if (inPosition) {
-      const pnl = entryPrice.minus(close).div(entryPrice).multipliedBy(100);
+      const pnl = entryPrice.minus(close).div(entryPrice).multipliedBy(100); // short = earn when price drops
       const timeInPosition = i - entryIndex;
 
       if (
         pnl.isGreaterThanOrEqualTo(settings.takeProfit) ||
-        pnl.isLessThanOrEqualTo(settings.stopLoss.negated()) ||
+        pnl.isLessThanOrEqualTo(new BigNumber(settings.stopLoss).negated()) ||
         timeInPosition >= settings.maxPositionLifetime
       ) {
         results.push({
@@ -85,6 +89,10 @@ export async function backtest(settings, candles) {
     }
   }
 
+  // console.log('Результати угод:', results);
+
+
+  // Підсумки
   let totalPnL = new BigNumber(0);
   let totalProfit = new BigNumber(0);
   let totalLoss = new BigNumber(0);
@@ -94,20 +102,36 @@ export async function backtest(settings, candles) {
   for (const trade of results) {
     const pnl = new BigNumber(trade.pnl);
     totalPnL = totalPnL.plus(pnl);
+
     const profitUSD = pnl.div(100).multipliedBy(settings.positionVolume);
     if (pnl.isGreaterThan(0)) {
       wins++;
       totalProfit = totalProfit.plus(profitUSD);
     } else {
       losses++;
-      totalLoss = totalLoss.plus(profitUSD);
+      totalLoss = totalLoss.plus(profitUSD); // буде від’ємне число
     }
   }
 
-  const netProfit = totalProfit.plus(totalLoss);
+  const netProfit = totalProfit.plus(totalLoss).toFixed(2); // totalLoss від’ємний
+  const winRate = (wins / (wins + losses)) * 100;
 
   return {
     settings,
-    netProfit
+    result: {
+      netProfit,
+      totalPnL: totalPnL.toFixed(2),
+      winRate,
+      totalProfit: totalProfit.toFixed(2),
+      totalLoss: totalLoss.toFixed(2),
+      countPosition: {
+        wins, losses
+      }
+    }
   };
+
+    
+} catch (error) {
+    console.log(error.message);
+}
 }
