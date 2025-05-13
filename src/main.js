@@ -52,6 +52,23 @@ function getTime() {
   }
 }
 
+function shuffleArray(array) {
+  const arr = array.slice(); // копіюємо, щоб не змінювати оригінал
+  let currentIndex = arr.length, randomIndex;
+
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // Міняємо місцями
+    [arr[currentIndex], arr[randomIndex]] = [
+      arr[randomIndex], arr[currentIndex]
+    ];
+  }
+
+  return arr;
+}
+
 async function run() {
   const { start, from, to } = getTime();
 
@@ -60,7 +77,7 @@ async function run() {
   console.log(`🧠 Розрахунок по стратегії: ${STRATEGY_NAME}`);
   console.log(`🧠 Пара: ${PAIR}`);
 
-  const testConfigs = strategy[STRATEGY_KEY].configs();
+  const testConfigs = shuffleArray(strategy[STRATEGY_KEY].configs());
 
   console.log(`🧠 Кількість конфігурацій: ${testConfigs.length} \n`);
 

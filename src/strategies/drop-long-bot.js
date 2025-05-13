@@ -1,63 +1,8 @@
 import BigNumber from 'bignumber.js';
-import fs from 'fs';
-import path from 'path';
 
-const CONFIG_FILE = process.env.CONFIG_FILE || null;
+import { configs } from './configs.js';
+
 const COMMISSION_FEE = (parseFloat(process.env.COMMISSION_FEE) || 0.05) / 100;
-const POSITION_VOLUME = parseInt(process.env.POSITION_VOLUME, 10) || 100;
-
-// === Генератор конфігурацій для тестирования ===
-function configs() {
-  if (CONFIG_FILE) {
-    const configPath = path.resolve(`../results-strategies/${CONFIG_FILE}`);
-
-    if (fs.existsSync(configPath)) {
-      try {
-        const fileContent = fs.readFileSync(configPath, 'utf-8');
-        const configData = JSON.parse(fileContent);
-
-        console.log(`✅ Загружено ${configData.length} конфигов из JSON.`);
-        return configData;
-      } catch (e) {
-        console.error('❌ Ошибка при чтении конфига из JSON');
-      }
-    } else {
-      console.warn('⚠️ Файл конфигов не найден, генерирую список.');
-    }
-  }
-
-  const dropPercents = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  const takeProfits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  const stopLosses = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  const durations = [1, 5, 10, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150];
-  const breakTimes = [1, 15, 30, 45, 60, 75, 90, 105];
-
-  const targetCount = 1000000;
-  const testConfigs = [];
-
-  outer: for (let dp of dropPercents) {
-    for (let tp of takeProfits) {
-      for (let sl of stopLosses) {
-        for (let d of durations) {
-          for (let bt of breakTimes) {
-            testConfigs.push({
-              positionVolume: POSITION_VOLUME,
-              dropPercent: dp,
-              takeProfit: tp,
-              stopLoss: sl,
-              maxPositionLifetime: 30000,
-              duration: d,
-              breakTime: bt,
-            });
-            if (testConfigs.length >= targetCount) break outer;
-          }
-        }
-      }
-    }
-  }
-
-  return testConfigs;
-}
 
 function percentDrop(from, to) {
   return new BigNumber(from).minus(to).div(from).multipliedBy(100);
@@ -187,4 +132,7 @@ async function backtest(settings, candles) {
   }
 }
 
-export default { backtest, configs };
+export default {
+  backtest,
+  configs: configs.bind(this, 'drop-long')
+};
