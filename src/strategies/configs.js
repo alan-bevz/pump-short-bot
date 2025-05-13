@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import BigNumber from 'bignumber.js';
 
 const CONFIG_FILE = process.env.CONFIG_FILE || null;
 const POSITION_VOLUME = parseInt(process.env.POSITION_VOLUME, 10) || 100;
@@ -74,15 +73,15 @@ function configsDropLong() {
 
 // === ГЕНЕРАТОР КОНФІГІВ ДЛЯ GRID-LONG ===
 function configsGridLong() {
-  const firstPositionVolumes = [25,50,100];
-  const positionVolumeRatios = [1,1.5,2];
-  const distanceToFirstOrders = [1,2,3];       // % від ціни входу
-  const averagingSteps = [1,2,5];              // % за крок
-  const averagingStepRatios = [1];             // множник кроку
-  const numberOfAveragingStepsList = [3,5,10];
-  const takeProfits = [3,5,10];                // %
-  const stopLosses = [10,20,45];               // %
-  const breakTimes = [60,120,240];             // хвилин
+  const firstPositionVolumes       = [POSITION_VOLUME];
+  const positionVolumeRatios       = [1,1.25,1.5,2,3];
+  const distanceToFirstOrders      = [0.5,1,2,3,5];       // % від ціни входу
+  const averagingSteps             = [0.5,1,2,3,5,10];    // % за крок
+  const averagingStepRatios        = [0.5,1,1.5,2];       // множник кроку
+  const numberOfAveragingStepsList = [3,5,10,15,20];
+  const takeProfits                = [2,3,5,8,10,15];     // %
+  const stopLosses                 = [5,10,15,20,30,45,60]; // %
+  const breakTimes                 = [30,60,120,240,480]; // хвилин
 
   const configs = [];
   outer: for (let fpv of firstPositionVolumes) {
