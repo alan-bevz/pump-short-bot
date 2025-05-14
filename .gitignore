@@ -3,3 +3,4 @@ results-strategies
 .DS_Store
 .env
 .vscode
+logs

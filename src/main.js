@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import os from 'os';
 import { Worker } from 'worker_threads';
 
@@ -91,10 +92,11 @@ async function run() {
 
   const promises = chunks.map((chunk, idx) =>
     new Promise((resolve, reject) => {
-      const worker = new Worker('./worker.js', {
+      const worker = new Worker(new URL('./worker.js', import.meta.url), {
         workerData: {
           configs: chunk,
-          candles, workerId: idx + 1,
+          candles,
+           workerId: idx + 1,
           strategyKey: STRATEGY_KEY
         }
       });

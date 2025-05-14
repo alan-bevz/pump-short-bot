@@ -33,7 +33,7 @@ function flattenObject(obj, prefix = '', res = {}) {
  * @param {Array} results - масив об'єктів з полями result + settings
  * @param {string} filename - назва файлу (без шляху), напр. "drop-long.csv"
  */
-export function saveResultsAsCsv(results, folder = '../results-strategies', userFilename = null) {
+export function saveResultsAsCsv(results, folder = './results-strategies', userFilename = null) {
 
   const filename = userFilename || generateFileName();
   const extension = '.csv';
@@ -44,9 +44,9 @@ export function saveResultsAsCsv(results, folder = '../results-strategies', user
   }
 
   const outputDir = path.resolve(folder);
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir);
-  }
+
+  fs.mkdirSync(outputDir, { recursive: true });
+
 
   // 🆕 Генеруємо унікальну назву файлу
   let finalFilename = filename;
@@ -79,10 +79,10 @@ export function saveResultsAsCsv(results, folder = '../results-strategies', user
           : value ?? '';
     }).join(';'); // роздільник колонок — крапка з комою
   });
-  
+
   const csv = [
     `DATE: ${new Date()}; YEARS_BACK: ${YEARS_BACK}; MONTHS_BACK: ${MONTHS_BACK}; COMMISSION FEE: ${COMMISSION_FEE} ; POSITION VOLUME: ${POSITION_VOLUME} ;CONFIG: ${CONFIG_FILE} ;`,
-    headers.join(';'), 
+    headers.join(';'),
     ...rows
   ].join('\n');
 
