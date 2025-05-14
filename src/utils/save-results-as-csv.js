@@ -33,8 +33,9 @@ function flattenObject(obj, prefix = '', res = {}) {
  * @param {Array} results - масив об'єктів з полями result + settings
  * @param {string} filename - назва файлу (без шляху), напр. "drop-long.csv"
  */
-export function saveResultsAsCsv(results, folder = './results-strategies', userFilename = null) {
+export function saveResultsAsCsv(results, folderName = 'results-strategies', userFilename = null) {
 
+  const folder =  path.resolve(process.cwd(), folderName)
   const filename = userFilename || generateFileName();
   const extension = '.csv';
 

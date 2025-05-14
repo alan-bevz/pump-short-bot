@@ -1,6 +1,10 @@
 import { parentPort, workerData } from 'worker_threads';
 import strategy from './strategies/index.js';
 
+function log(type, message) {
+  parentPort?.postMessage({ type, message });
+}
+
 // Розпаковуємо дані з воркеру
 const { 
   configs: CONFIGS, 
@@ -63,15 +67,15 @@ async function processBatch(batch, startIndex) {
 
   if (bestInBatch) {
     ALL_RESULTS.push(bestInBatch);
-    console.log(`📈 Воркер #${WORKER_ID}: кращий у бачу (від ${startIndex} до ${startIndex + BATCH_SIZE}): ${bestInBatch.result.netWithCommission} USDT`);
+    log('log', `📈 Воркер #${WORKER_ID}: кращий у бачу (від ${startIndex} до ${startIndex + BATCH_SIZE}): ${bestInBatch.result.netWithCommission} USDT`);
   } else {
-    console.log(`📈 Воркер #${WORKER_ID}: немає кращого у бачі (від ${startIndex} до ${startIndex + BATCH_SIZE})`);
+    log('log', `📈 Воркер #${WORKER_ID}: немає кращого у бачі (від ${startIndex} до ${startIndex + BATCH_SIZE})`);
   }
 }
 
 // Головний блок виконання
 (async () => {
-  console.warn(`\x1b[32m📈 Воркер #${WORKER_ID}: початок обробки бача ${CONFIGS.length}\x1b[0m`);
+  log('warn', `\x1b[32m📈 Воркер #${WORKER_ID}: початок обробки бача ${CONFIGS.length}\x1b[0m`);
 
   for (let i = 0; i < CONFIGS.length; i += BATCH_SIZE) {
     const batch = CONFIGS.slice(i, i + BATCH_SIZE);

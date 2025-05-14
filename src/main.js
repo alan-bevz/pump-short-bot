@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import os from 'os';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Worker } from 'worker_threads';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import strategy from './strategies/index.js';
 import toCamelCase from './utils/to-camel-case.js'
@@ -15,7 +20,10 @@ const TRADING_TYPE = process.env.TRADING_TYPE?.toLowerCase() || null
 const STRATEGY_KEY = toCamelCase(STRATEGY_NAME);
 const YEARS_BACK = parseInt(process.env.YEARS_BACK || '0');
 const MONTHS_BACK = parseInt(process.env.MONTHS_BACK || '0');
-const FOLDER = '../results-strategies/';
+const WORKER_PATH = path.resolve(__dirname, './worker.js');
+const FOLDER_RESULTS_NAME = 'results-strategies';
+
+
 
 // === Перевірка, чи задані всі змінні
 if (!STRATEGY_NAME || !PAIR || !TRADING_TYPE) {
@@ -44,7 +52,7 @@ function getTime() {
   fromDate.setFullYear(fromDate.getFullYear() - YEARS_BACK);
   fromDate.setMonth(fromDate.getMonth() - MONTHS_BACK);
 
-  const from = fromDate.getTime(); // минус YEARS_BACK год и MONTHS_BACK месяца
+  const from = fromDate.getTime();
 
   return {
     start: now,
@@ -70,13 +78,25 @@ function shuffleArray(array) {
   return arr;
 }
 
+// === Обработка сообщений от воркера ===
+function handleWorkerMessage(data, idx, resolve) {
+  if (data?.type === 'log') {
+    console.log(data.message);
+  } else if (data?.type === 'warn') {
+    console.warn(data.message);
+  } else {
+    console.log(`🧵 Воркер #${idx + 1} завершився.`);
+    resolve(data);
+  }
+}
+
 async function run() {
   const { start, from, to } = getTime();
 
-  console.log(`🟢 Бектест стартував о ${start.toLocaleTimeString()}`);
-  console.log(`🧠 Доступно логічних ядер: ${THREADS}/${CPU_COUNT}`);
-  console.log(`🧠 Розрахунок по стратегії: ${STRATEGY_NAME}`);
-  console.log(`🧠 Пара: ${PAIR}`);
+  console.log(`🟢 Бектест стартував о ${start.toLocaleTimeString()}
+🧠 Доступно логічних ядер: ${THREADS}/${CPU_COUNT}
+🧠 Розрахунок по стратегії: ${STRATEGY_NAME}
+🧠 Пара: ${PAIR}`);
 
   const testConfigs = shuffleArray(strategy[STRATEGY_KEY].configs());
 
@@ -92,20 +112,16 @@ async function run() {
 
   const promises = chunks.map((chunk, idx) =>
     new Promise((resolve, reject) => {
-      const worker = new Worker(new URL('./worker.js', import.meta.url), {
+      const worker = new Worker(WORKER_PATH, {
         workerData: {
           configs: chunk,
           candles,
-           workerId: idx + 1,
+          workerId: idx + 1,
           strategyKey: STRATEGY_KEY
         }
       });
 
-      worker.on('message', (result) => {
-        console.log(`🧵 Воркер #${idx + 1} завершився.`);
-        resolve(result);
-      });
-
+      worker.on('message', (data) => handleWorkerMessage(data, idx, resolve));
       worker.on('error', reject);
       worker.on('exit', (code) => {
         if (code !== 0) reject(new Error(`Воркер завершився з кодом ${code}`));
@@ -118,14 +134,18 @@ async function run() {
     return parseFloat(b.score) - parseFloat(a.score);
   });
 
-  saveResultsAsCsv(sortedResults, FOLDER + PAIR, `${PAIR}-${TRADING_TYPE}-${STRATEGY_NAME}`);
+  saveResultsAsCsv(sortedResults, `${FOLDER_RESULTS_NAME}/${PAIR}`, `${PAIR}-${TRADING_TYPE}-${STRATEGY_NAME}`);
 
   const end = new Date();
   const duration = formatDuration(end - start);
 
-  console.log(`\n✅ Бектест завершився о ${end.toLocaleTimeString()}`);
-  console.log(`🕒 Тривалість: ${duration}`);
-  console.log(`🚀 Чистий прибуток: ${sortedResults[0].result.netProfit} USDT, WinRate: ${sortedResults[0].result.winRate}%`);
+  console.log(`\n✅ Бектест завершився о ${end.toLocaleTimeString()}
+🕒 Тривалість: ${duration}`);
+  if (sortedResults.length > 0) {
+    console.log(`🚀 Чистий прибуток: ${sortedResults[0].result.netProfit} USDT, WinRate: ${sortedResults[0].result.winRate}%`);
+  } else {
+    console.warn('⚠️ Результати порожні. Перевірте конфігурації або дані.');
+  }
 }
 
 run();

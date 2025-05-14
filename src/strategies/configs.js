@@ -2,10 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ES module __dirname/__filename shim
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const BASE_DIR = path.resolve(__dirname, '../../results-strategies');
 const CONFIG_FILE = process.env.CONFIG_FILE || null;
 const POSITION_VOLUME = parseInt(process.env.POSITION_VOLUME, 10) || 100;
 const TARGET_COUNT = parseInt(process.env.TARGET_COUNT, 10) || 1000000;
@@ -124,8 +124,7 @@ function configsGridLong() {
 export function configs(strategy) {
   // Спроба завантажити JSON-конфіги з папки results-strategies
   if (CONFIG_FILE) {
-    const baseDir = path.resolve(__dirname, '../../results-strategies');
-    if (fs.existsSync(baseDir) && fs.statSync(baseDir).isDirectory()) {
+    if (fs.existsSync(BASE_DIR) && fs.statSync(BASE_DIR).isDirectory()) {
       const findConfig = dir => {
         for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
           const fullPath = path.join(dir, e.name);
@@ -137,7 +136,7 @@ export function configs(strategy) {
         }
         return null;
       };
-      const configPath = findConfig(baseDir);
+      const configPath = findConfig(BASE_DIR);
       if (configPath) {
         try {
           const fileContent = fs.readFileSync(configPath, 'utf-8');
@@ -151,7 +150,7 @@ export function configs(strategy) {
         console.warn(`⚠️ JSON-файл ${CONFIG_FILE} не знайдено`);
       }
     } else {
-      console.warn(`⚠️ Директорія ${baseDir} не знайдена або це не папка, пропускаю завантаження JSON.`);
+      console.warn(`⚠️ Директорія ${BASE_DIR} не знайдена або це не папка, пропускаю завантаження JSON.`);
     }
   }
 
