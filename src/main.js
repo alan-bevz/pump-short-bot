@@ -142,7 +142,7 @@ async function run() {
   console.log(`\n✅ Бектест завершився о ${end.toLocaleTimeString()}
 🕒 Тривалість: ${duration}`);
   if (sortedResults.length > 0) {
-    console.log(`🚀 Чистий прибуток: ${sortedResults[0].result.netProfit} USDT, WinRate: ${sortedResults[0].result.winRate}%`);
+    console.log(`🚀 Чистий прибуток: ${sortedResults[0].result.netWithCommission} USDT, WinRate: ${sortedResults[0].result.winRate}%`);
   } else {
     console.warn('⚠️ Результати порожні. Перевірте конфігурації або дані.');
   }
