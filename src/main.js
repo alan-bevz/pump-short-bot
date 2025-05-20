@@ -7,8 +7,10 @@ import { Worker } from 'worker_threads';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
 import strategy from './strategies/index.js';
 import toCamelCase from './utils/to-camel-case.js'
+import { checkGoogleDriveAuthorization } from './utils/google-drive-auth.js';
 import { saveResultsAsCsv } from './utils/save-results-as-csv.js';
 import { getCandles } from './candles.js';
 
@@ -92,6 +94,7 @@ function handleWorkerMessage(data, idx, resolve) {
 
 async function run() {
   const { start, from, to } = getTime();
+  const auth = await checkGoogleDriveAuthorization();
 
   console.log(`🟢 Бектест стартував о ${start.toLocaleTimeString()}
 🧠 Доступно логічних ядер: ${THREADS}/${CPU_COUNT}
@@ -134,7 +137,7 @@ async function run() {
     return parseFloat(b.score) - parseFloat(a.score);
   });
 
-  saveResultsAsCsv(sortedResults, `${FOLDER_RESULTS_NAME}/${PAIR}`, `${PAIR}-${TRADING_TYPE}-${STRATEGY_NAME}`);
+  await saveResultsAsCsv(auth, sortedResults, `${FOLDER_RESULTS_NAME}/${PAIR}/${STRATEGY_NAME}`, `${PAIR}-${TRADING_TYPE}-${STRATEGY_NAME}`);
 
   const end = new Date();
   const duration = formatDuration(end - start);

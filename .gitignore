@@ -4,3 +4,5 @@ results-strategies
 .env
 .vscode
 logs
+oauth-client-secret.json
+oauth-token.json

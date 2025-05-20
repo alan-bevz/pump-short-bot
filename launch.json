@@ -1,8 +1,0 @@
-{
-  "type": "node",
-  "request": "launch",
-  "name": "Run Pump Bot",
-  "program": "${workspaceFolder}/main.js",
-  "runtimeArgs": ["--trace-warnings"],
-  "outputCapture": "std"
-}

@@ -5,6 +5,7 @@
   "dependencies": {
     "bignumber.js": "^9.3.0",
     "dotenv": "^16.5.0",
+    "googleapis": "^148.0.0",
     "os": "^0.1.2"
   }
 }
