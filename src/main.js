@@ -95,62 +95,65 @@ function handleWorkerMessage(data, idx, resolve) {
 
 async function runForPair(pair, googleDriveAuth) {
   const { start, from, to } = getTime();
-
   console.log(`\n🟢 Бектест для ${pair} стартував о ${start.toLocaleTimeString()}`);
 
-  const testConfigs = shuffleArray(strategy[STRATEGY_KEY].configs());
-  console.log(`🧠 Кількість конфігурацій: ${testConfigs.length}`);
+  try {
+    const { candles } = await getCandles(pair, from, to, 1, TRADING_TYPE);
+    console.log(`🧠 Кількість свічок: ${candles.length}`);
 
-  const { candles } = await getCandles(pair, from, to, 1, TRADING_TYPE);
-  console.log(`🧠 Кількість свічок: ${candles.length}`);
+    const testConfigs = shuffleArray(strategy[STRATEGY_KEY].configs());
+    console.log(`🧠 Кількість конфігурацій: ${testConfigs.length}`);
 
-  const chunkSize = Math.ceil(testConfigs.length / THREADS);
-  const chunks = Array.from({ length: THREADS }, (_, i) =>
-    testConfigs.slice(i * chunkSize, (i + 1) * chunkSize)
-  );
-
-  const promises = chunks.map(
-    (chunk, idx) =>
-      new Promise((resolve, reject) => {
-        const worker = new Worker(WORKER_PATH, {
-          workerData: {
-            configs: chunk,
-            candles,
-            workerId: idx + 1,
-            strategyKey: STRATEGY_KEY
-          }
-        });
-
-        worker.on('message', data => handleWorkerMessage(data, idx, resolve));
-        worker.on('error', reject);
-        worker.on('exit', code => {
-          if (code !== 0) reject(new Error(`Воркер завершився з кодом ${code}`));
-        });
-      })
-  );
-
-  const results = (await Promise.all(promises)).flat();
-  const sortedResults = results.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
-
-  await saveResultsAsCsv(
-    googleDriveAuth,
-    sortedResults,
-    `${FOLDER_RESULTS_NAME}/${pair}/${STRATEGY_NAME}`,
-    `${pair}-${TRADING_TYPE}-${STRATEGY_NAME}`
-  );
-
-  const end = new Date();
-  const duration = formatDuration(end - start);
-
-  console.log(
-    `✅ ${pair}: Бектест завершився о ${end.toLocaleTimeString()} — Тривалість: ${duration}`
-  );
-  if (sortedResults.length > 0) {
-    console.log(
-      `🚀 ${pair}: Чистий прибуток: ${sortedResults[0].result.netWithCommission} USDT, WinRate: ${sortedResults[0].result.winRate}%`
+    const chunkSize = Math.ceil(testConfigs.length / THREADS);
+    const chunks = Array.from({ length: THREADS }, (_, i) =>
+      testConfigs.slice(i * chunkSize, (i + 1) * chunkSize)
     );
-  } else {
-    console.warn(`⚠️ ${pair}: Результати порожні.`);
+
+    const promises = chunks.map(
+      (chunk, idx) =>
+        new Promise((resolve, reject) => {
+          const worker = new Worker(WORKER_PATH, {
+            workerData: {
+              configs: chunk,
+              candles,
+              workerId: idx + 1,
+              strategyKey: STRATEGY_KEY
+            }
+          });
+
+          worker.on('message', data => handleWorkerMessage(data, idx, resolve));
+          worker.on('error', reject);
+          worker.on('exit', code => {
+            if (code !== 0) reject(new Error(`Воркер завершився з кодом ${code}`));
+          });
+        })
+    );
+
+    const results = (await Promise.all(promises)).flat();
+    const sortedResults = results.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
+
+    await saveResultsAsCsv(
+      googleDriveAuth,
+      sortedResults,
+      `${FOLDER_RESULTS_NAME}/${pair}/${STRATEGY_NAME}`,
+      `${pair}-${TRADING_TYPE}-${STRATEGY_NAME}`
+    );
+
+    const end = new Date();
+    const duration = formatDuration(end - start);
+
+    console.log(
+      `✅ ${pair}: Бектест завершився о ${end.toLocaleTimeString()} — Тривалість: ${duration}`
+    );
+    if (sortedResults.length > 0) {
+      console.log(
+        `🚀 ${pair}: Чистий прибуток: ${sortedResults[0].result.netWithCommission} USDT, WinRate: ${sortedResults[0].result.winRate}%`
+      );
+    } else {
+      console.warn(`⚠️ ${pair}: Результати порожні.`);
+    }
+  } catch (error) {
+   console.error('\x1b[31m%s\x1b[0m',`🆘 ${error.message}`);
   }
 }
 
